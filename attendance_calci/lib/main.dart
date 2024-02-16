@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,12 +11,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Attendance_calci',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'home_page'),
     );
   }
 }
@@ -30,11 +31,41 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  late SharedPreferences _prefs;
+  late String userName;
+  late String semester;
+  late String selectedDept;
+  bool detailsEntered = false;
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  // Load user data from SharedPreferences
+  Future<void> _loadUserData() async {
+    _prefs = await SharedPreferences.getInstance();
+    userName = _prefs.getString('userName') ?? '';
+    semester = _prefs.getString('semester') ?? '';
+    selectedDept = _prefs.getString('selectedDept') ?? '';
+
+    // Check if details are entered
+    if (userName.isNotEmpty && semester.isNotEmpty && selectedDept.isNotEmpty) {
+      setState(() {
+        detailsEntered = true;
+      });
+    }
+  }
+
+  // Save user data to SharedPreferences
+  Future<void> _saveUserData() async {
+    await _prefs.setString('userName', userName);
+    await _prefs.setString('semester', semester);
+    await _prefs.setString('selectedDept', selectedDept);
+
     setState(() {
-      _counter++;
+      detailsEntered = true;
     });
   }
 
@@ -43,16 +74,60 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
-        title: Center(child: Text('Attendance Monitor')), // Changed app title
+        title: Center(child: Text('Attendance Monitor')),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            // Removed the text widgets and button
-          ],
-        ),
+        child: detailsEntered
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  // Display content for when details are entered
+                  Text('Welcome, $userName!'),
+                  Text('Semester: $semester'),
+                  Text('Department: $selectedDept'),
+                  // Add more widgets as needed
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  // Ask user to enter details for the first time
+                  TextField(
+                    onChanged: (value) {
+                      userName = value;
+                    },
+                    decoration: InputDecoration(labelText: 'Enter Name'),
+                  ),
+                  TextField(
+                    onChanged: (value) {
+                      semester = value;
+                    },
+                    decoration: InputDecoration(labelText: 'Enter Semester'),
+                  ),
+                  DropdownButton<String>(
+                    value: selectedDept,
+                    onChanged: (value) {
+                      setState(() {
+                        selectedDept = value!;
+                      });
+                    },
+                    items: ['Dept1', 'Dept2', 'Dept3']
+                        .map((dept) => DropdownMenuItem<String>(
+                              value: dept,
+                              child: Text(dept),
+                            ))
+                        .toList(),
+                    hint: Text('Select Department'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _saveUserData();
+                    },
+                    child: Text('Save Details'),
+                  ),
+                ],
+              ),
       ),
-    ); // This trailing comma makes auto-formatting nicer for build methods.
+    );
   }
 }
